@@ -1,8 +1,7 @@
 # UniVoice – Jinja2 / Flask Frontend
 
-A **Flask + Jinja2** port of the UniVoice hostel grievance management system.
-Identical feature-set to the React version, zero JavaScript frameworks required
-(Alpine.js CDN only for minor UI interactions like accordion rows).
+A **Flask + Jinja2** port of the UniVoice hostel grievance management system,
+with **Google OAuth 2.0** sign-in.
 
 ---
 
@@ -11,11 +10,12 @@ Identical feature-set to the React version, zero JavaScript frameworks required
 | Layer | Choice |
 |---|---|
 | Web framework | Flask 3.1 |
-| Templates | Jinja2 (built into Flask) |
-| Styling | Tailwind CSS via CDN |
-| Micro-interactivity | Alpine.js via CDN |
-| Server | Gunicorn |
-| Data | In-memory Python dicts (same seed as React mock data) |
+| Templates | Jinja2 (built-in) |
+| OAuth 2.0 | Authlib 1.3 |
+| Styling | Tailwind CSS (CDN) |
+| Micro-interactivity | Alpine.js (CDN) |
+| WSGI server | Gunicorn |
+| Data | In-memory Python dicts |
 
 ---
 
@@ -23,16 +23,15 @@ Identical feature-set to the React version, zero JavaScript frameworks required
 
 ```
 univoice-jinja/
-├── app.py                  ← all routes + business logic
-├── data/
-│   └── mock_data.py        ← seed data (mirrors src/data/mockData.ts)
+├── app.py                     ← routes, auth, Google OAuth, business logic
+├── data/mock_data.py          ← seed data (mirrors mockData.ts)
 ├── templates/
-│   ├── base.html           ← nav, flash messages, Tailwind/Alpine CDN
-│   ├── login.html
-│   ├── not_found.html
+│   ├── base.html              ← nav (with Google avatar), flash messages
+│   ├── login.html             ← manual + Google Sign-In
 │   ├── student_dashboard.html
 │   ├── warden_dashboard.html
 │   ├── mentor_dashboard.html
+│   ├── not_found.html
 │   └── admin/
 │       ├── dashboard.html
 │       ├── hostels.html
@@ -42,9 +41,11 @@ univoice-jinja/
 │       ├── edit_user.html
 │       ├── student_profile.html
 │       └── complaints.html
+├── .env.example               ← copy → .env and fill in credentials
 ├── requirements.txt
-├── Procfile                ← for Render
-├── render.yaml             ← one-click Render deploy config
+├── Procfile                   ← Render
+├── render.yaml                ← one-click Render deploy
+├── vercel.json                ← Vercel deploy
 ├── runtime.txt
 └── .gitignore
 ```
@@ -54,17 +55,18 @@ univoice-jinja/
 ## Running locally
 
 ```bash
-# 1. Clone / cd into repo
-cd univoice-jinja
-
-# 2. Create a virtual environment
 python -m venv venv
-source venv/bin/activate          # Windows: venv\Scripts\activate
-
-# 3. Install dependencies
+source venv/bin/activate        # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 
-# 4. Run
+# Create .env with your credentials (see .env.example)
+cp .env.example .env
+# Edit .env — fill in SECRET_KEY, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
+
+# Load env vars and start
+export $(grep -v '^#' .env | xargs)   # Linux/macOS
+# On Windows (PowerShell): Get-Content .env | ForEach-Object { ... }
+
 python app.py
 ```
 
@@ -72,7 +74,59 @@ Open **http://localhost:5000**
 
 ---
 
-## Demo credentials
+## Setting up Google OAuth 2.0
+
+### Step 1 — Google Cloud Console
+
+1. Go to [console.cloud.google.com](https://console.cloud.google.com).
+2. Create a project (or select an existing one).
+3. **APIs & Services → OAuth consent screen**
+   - User type: **External**
+   - App name: `UniVoice`, support email, developer email → Save
+   - Scopes: add `email` and `profile`
+   - Test users: add your own Google account for local testing
+4. **APIs & Services → Credentials → Create Credentials → OAuth client ID**
+   - Application type: **Web application**
+   - Name: `UniVoice Web`
+   - Authorised redirect URIs — add **all** of:
+     ```
+     http://localhost:5000/auth/google/callback          ← local dev
+     https://your-app.onrender.com/auth/google/callback  ← Render
+     https://your-app.vercel.app/auth/google/callback    ← Vercel
+     ```
+5. Click **Create** → copy **Client ID** and **Client Secret**.
+
+### Step 2 — Set environment variables
+
+**Locally (.env file):**
+```
+GOOGLE_CLIENT_ID=xxxxx.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=xxxxx
+SECRET_KEY=any-long-random-string
+```
+
+**Render:** Dashboard → your service → Environment → add the same three vars.
+
+**Vercel:** Dashboard → your project → Settings → Environment Variables → add them.
+
+### How sign-in works
+
+1. User clicks **Sign in with Google**.
+2. Google shows the account picker / consent screen.
+3. After approval, Google redirects to `/auth/google/callback`.
+4. The app extracts the user's **email** from Google's token.
+5. That email is looked up in the user store:
+   - **Found** → session is set, user is redirected to their dashboard.
+   - **Not found** → flash error: *"No account found for email@x.com.
+     Ask your administrator to register your email first."*
+
+> **Important:** a Google account alone is not enough.  
+> The administrator must first create a user record with that exact Google
+> email address via **Admin → Manage Students / Wardens / Mentors**.
+
+---
+
+## Demo credentials (manual login)
 
 | Role    | Email                  | Password |
 |---------|------------------------|----------|
@@ -83,72 +137,36 @@ Open **http://localhost:5000**
 
 ---
 
-## Deploying to Render (free tier)
+## Deploying to Render
 
-1. Push this repo to GitHub / GitLab.
-2. Go to **render.com → New → Web Service**.
-3. Connect your repo — Render auto-detects `render.yaml`.
-4. Set env var `SECRET_KEY` to any long random string (or let Render generate it).
-5. Deploy — done. ✅
-
-> **Note:** data is in-memory and resets on every deploy/restart. To persist
-> data, replace the `_store` dict in `app.py` with a SQLite/PostgreSQL backend.
-
----
+1. Push this repo to GitHub.
+2. **render.com → New → Web Service** → connect repo.
+3. Render auto-detects `render.yaml` — click **Deploy**.
+4. In your service's **Environment** tab, add:
+   - `SECRET_KEY`
+   - `GOOGLE_CLIENT_ID`
+   - `GOOGLE_CLIENT_SECRET`
+   - `FLASK_ENV` = `production`
+5. Add `https://your-app.onrender.com/auth/google/callback` to Google Console.
 
 ## Deploying to Vercel
 
-Vercel does not natively support Flask, but you can use the
-`@vercel/python` runtime:
+1. Push repo to GitHub.
+2. **vercel.com → New Project** → import repo.
+3. Add env vars in **Settings → Environment Variables**.
+4. Add the Vercel callback URL to Google Console.
 
-1. Create `vercel.json` in the repo root:
-
-```json
-{
-  "version": 2,
-  "builds": [{ "src": "app.py", "use": "@vercel/python" }],
-  "routes": [{ "src": "/(.*)", "dest": "app.py" }]
-}
-```
-
-2. Install Vercel CLI: `npm i -g vercel`
-3. Run `vercel` and follow the prompts.
-
-> Vercel Python runtime is serverless — each request may spin up a fresh
-> instance, so in-memory data **will reset between requests**. Use a database
-> (e.g. Vercel Postgres) for persistence on Vercel.
+> ⚠️ Vercel is serverless — in-memory data resets on each cold start.
+> Use a database (e.g. Vercel Postgres, PlanetScale) for persistence.
 
 ---
 
-## Connecting to your existing Jinja backend
+## Connecting to your real backend
 
-The app is designed so every route either:
-- Reads from `_store` (the in-memory dict), or
-- Delegates to Flask's `session` for auth.
+Every route in `app.py` reads from `_store` (a plain dict).  
+To wire it to your actual Jinja backend:
 
-To wire it to your real backend:
-1. Replace `_store["users"]` reads with API/DB calls.
-2. Replace `session`-based auth with whatever your backend uses
-   (JWT cookie, server-side session with Redis, etc.).
-3. The templates are **pure Jinja2** — they only receive plain Python dicts,
-   so no changes are needed in templates when you swap the data layer.
-
----
-
-## Feature parity with React version
-
-| Feature | React | Jinja |
-|---|---|---|
-| Role-based login (Admin / Student / Warden / Mentor) | ✅ | ✅ |
-| Google OAuth placeholder | ✅ | ✅ |
-| Student complaint filing + abusive-word detection | ✅ | ✅ |
-| Student complaint history with status colours | ✅ | ✅ |
-| Warden 5-section dashboard (urgent/pending/progress/done/archived) | ✅ | ✅ |
-| Mentor escalation (mark urgent + comment) | ✅ | ✅ |
-| Admin hostel CRUD | ✅ | ✅ |
-| Admin warden / mentor / student CRUD | ✅ | ✅ |
-| Admin complaint viewer with tab filter + delete | ✅ | ✅ |
-| Student profile with flagged complaint history | ✅ | ✅ |
-| Edit user (name / email / hostel / mentor) | ✅ | ✅ |
-| Flash notifications (replaces sonner toasts) | ✅ | ✅ |
-| Responsive Tailwind UI | ✅ | ✅ |
+1. Replace `_store["users"]` reads with your ORM / API calls.
+2. Replace `session`-based auth with whatever your backend uses.
+3. The Jinja templates receive only plain Python dicts — **no template
+   changes needed** when swapping the data layer.

@@ -79,3 +79,5 @@ desktop.ini
 *.cert
 *.p12
 secret_key.txt
+
+.env
