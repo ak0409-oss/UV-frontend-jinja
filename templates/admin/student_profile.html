@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Student Profile – {{ student.name }}{% endblock %}
+{% block content %}
+
+<a href="/admin/students" class="text-sm text-slate-500 hover:underline">← Back to Students</a>
+
+{# ── Student card ── #}
+<div class="border rounded-xl p-6 bg-white shadow-sm mt-4 mb-8">
+  <h2 class="text-xl font-bold text-slate-800">{{ student.name }}</h2>
+  <div class="mt-3 grid grid-cols-2 gap-2 text-sm">
+    <div><span class="font-medium">Email:</span> {{ student.email }}</div>
+    <div><span class="font-medium">Hostel:</span> {{ hostel.name if hostel else 'Unassigned' }}</div>
+    <div><span class="font-medium">Room:</span> {{ student.get('roomNumber') or 'N/A' }}</div>
+    <div><span class="font-medium">Mentor:</span> {{ mentor.name if mentor else 'None' }}</div>
+  </div>
+</div>
+
+{# ── Flagged ── #}
+<h3 class="text-lg font-bold text-red-600 border-b-2 border-red-500 pb-1 mb-3">
+  ⚠️ Flagged / Abusive History
+</h3>
+{% if not flagged %}
+  <p class="text-slate-500 mb-6 italic">No flagged complaints.</p>
+{% else %}
+  {% for c in flagged %}
+  <div class="bg-red-50 border border-red-300 rounded-lg p-4 mb-3">
+    <strong>{{ c.heading }}</strong>
+    <span class="text-xs text-slate-500 ml-2">({{ c.createdAt }})</span>
+    <p class="text-sm mt-1 text-slate-700">{{ c.description }}</p>
+  </div>
+  {% endfor %}
+{% endif %}
+
+{# ── Full history ── #}
+<h3 class="text-lg font-bold border-b-2 pb-1 mb-3 mt-8">📄 Complete Complaint History</h3>
+{% if not history %}
+  <p class="text-slate-500 italic">No other complaints filed.</p>
+{% else %}
+{% set status_colors = {
+  'resolved':    '#16a34a',
+  'pending':     '#ea580c',
+  'rejected':    '#dc2626',
+  'in_progress': '#2563eb',
+  'flagged':     '#6b7280',
+} %}
+<div class="overflow-x-auto rounded-lg border">
+  <table class="w-full text-sm">
+    <thead class="bg-slate-100">
+      <tr>
+        <th class="px-4 py-3 text-left">Date</th>
+        <th class="px-4 py-3 text-left">Category</th>
+        <th class="px-4 py-3 text-left">Issue</th>
+        <th class="px-4 py-3 text-left">Status</th>
+        <th class="px-4 py-3 text-left">Comments</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y">
+      {% for c in history %}
+      <tr class="hover:bg-slate-50">
+        <td class="px-4 py-3 text-slate-500">{{ c.createdAt }}</td>
+        <td class="px-4 py-3">
+          <span class="bg-slate-200 text-slate-700 text-xs rounded-full px-2 py-0.5">{{ c.category.upper() }}</span>
+        </td>
+        <td class="px-4 py-3">
+          <div class="font-medium">{{ c.heading }}</div>
+          <div class="text-xs text-slate-500">{{ c.description }}</div>
+        </td>
+        <td class="px-4 py-3">
+          <span class="text-white text-xs rounded-full px-2 py-1"
+                style="background:{{ status_colors.get(c.status, '#6b7280') }}">
+            {{ c.status.upper() }}
+          </span>
+        </td>
+        <td class="px-4 py-3 text-sm">
+          {% if c.get('mentorComment') %}
+          <div class="text-purple-700"><strong>Mentor:</strong> {{ c.mentorComment }}</div>
+          {% endif %}
+          {% if c.get('wardenComment') %}
+          <div class="text-blue-700"><strong>Warden:</strong> {{ c.wardenComment }}</div>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{% endblock %}

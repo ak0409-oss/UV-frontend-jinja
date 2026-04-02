@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Manage Wardens{% endblock %}
+{% block content %}
+
+<div class="flex justify-between items-center mb-6">
+  <h2 class="text-2xl font-bold">Manage Wardens</h2>
+  <a href="/admin" class="text-sm text-slate-500 hover:underline">← Back to Dashboard</a>
+</div>
+
+<div class="flex gap-8 flex-wrap">
+
+  {# ── List ── #}
+  <div class="flex-[2] min-w-0">
+    <h3 class="font-semibold mb-3">Current Wardens</h3>
+    {% if not wardens %}
+      <p class="text-slate-500 italic">No wardens assigned yet.</p>
+    {% else %}
+    <div class="overflow-x-auto rounded-lg border">
+      <table class="w-full text-sm">
+        <thead style="background:#f97316">
+          <tr>
+            <th class="px-4 py-3 text-left text-white">Name</th>
+            <th class="px-4 py-3 text-left text-white">Assigned Hostel</th>
+            <th class="px-4 py-3 text-left text-white">Action</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y">
+          {% for w in wardens %}
+          <tr class="hover:bg-orange-50">
+            <td class="px-4 py-3">
+              <strong>{{ w.name }}</strong>
+              <div class="text-xs text-slate-500">{{ w.email }}</div>
+            </td>
+            <td class="px-4 py-3">{{ hostel_map.get(w.get('hostelId',''), 'Unassigned') }}</td>
+            <td class="px-4 py-3 flex gap-2 flex-wrap">
+              <a href="/admin/edit-user/{{ w.id }}"
+                 class="border border-slate-400 hover:bg-slate-100 text-xs px-3 py-1 rounded transition">Edit</a>
+              <form method="POST" onsubmit="return confirm('Delete {{ w.name }}?')">
+                <input type="hidden" name="action" value="delete"/>
+                <input type="hidden" name="user_id" value="{{ w.id }}"/>
+                <button class="bg-red-500 hover:bg-red-600 text-white text-xs px-3 py-1 rounded transition">Delete</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </div>
+
+  {# ── Create ── #}
+  <div class="flex-1 min-w-[220px] border-2 border-orange-400 rounded-xl p-6 bg-orange-50 h-fit">
+    <h3 class="font-semibold mb-4">Add New Warden</h3>
+    <form method="POST" class="space-y-3">
+      <input type="hidden" name="action" value="create"/>
+      <input type="email" name="email" placeholder="Email Address" required
+             class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none"/>
+      <input type="text" name="name" placeholder="Full Name" required
+             class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none"/>
+      <input type="password" name="password" placeholder="Password" required
+             class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none"/>
+      <select name="hostelId" class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none">
+        <option value="">-- Select Hostel --</option>
+        {% for h in hostels %}
+        <option value="{{ h.id }}">{{ h.name }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit"
+              class="w-full text-white py-2 rounded-lg text-sm transition"
+              style="background:#f97316" onmouseover="this.style.background='#ea580c'"
+              onmouseout="this.style.background='#f97316'">
+        Create Warden
+      </button>
+    </form>
+  </div>
+
+</div>
+{% endblock %}

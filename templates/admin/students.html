@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Manage Students{% endblock %}
+{% block content %}
+
+<div class="flex justify-between items-center mb-4">
+  <h2 class="text-2xl font-bold">Manage Students</h2>
+  <a href="/admin" class="text-sm text-slate-500 hover:underline">← Back</a>
+</div>
+
+{# ── Hostel filter ── #}
+<div class="bg-slate-100 rounded-lg p-4 mb-5 flex items-center gap-3">
+  <label class="font-semibold text-sm">Select Hostel to View Students:</label>
+  <form method="GET" class="flex gap-2">
+    <select name="hostel" onchange="this.form.submit()"
+            class="border rounded-lg px-3 py-1.5 text-sm focus:outline-none">
+      <option value="">-- All Hostels --</option>
+      {% for h in hostels %}
+      <option value="{{ h.id }}" {% if h.id == sel_hostel %}selected{% endif %}>{{ h.name }}</option>
+      {% endfor %}
+    </select>
+  </form>
+</div>
+
+<div class="flex gap-5 flex-wrap">
+
+  {# ── List ── #}
+  <div class="flex-[2] min-w-0">
+    {% if not students %}
+      <p class="text-slate-500 italic">No students found.</p>
+    {% else %}
+    <div class="overflow-x-auto rounded-lg border">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-800 text-white">
+          <tr>
+            <th class="px-4 py-3 text-left">Room</th>
+            <th class="px-4 py-3 text-left">Name</th>
+            <th class="px-4 py-3 text-left">Mentor</th>
+            <th class="px-4 py-3 text-left">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y">
+          {% for s in students %}
+          <tr class="hover:bg-blue-50">
+            <td class="px-4 py-3">{{ s.get('roomNumber') or 'N/A' }}</td>
+            <td class="px-4 py-3 font-medium">{{ s.name }}</td>
+            <td class="px-4 py-3 text-slate-500">{{ mentor_map.get(s.get('mentorId',''), '—') }}</td>
+            <td class="px-4 py-3 flex gap-2 flex-wrap">
+              <a href="/admin/student/{{ s.id }}"
+                 class="border border-slate-400 hover:bg-slate-100 text-xs px-3 py-1 rounded transition">View</a>
+              <a href="/admin/edit-user/{{ s.id }}"
+                 class="border border-slate-400 hover:bg-slate-100 text-xs px-3 py-1 rounded transition">Edit</a>
+              <form method="POST" onsubmit="return confirm('Delete {{ s.name }}?')">
+                <input type="hidden" name="action" value="delete"/>
+                <input type="hidden" name="user_id" value="{{ s.id }}"/>
+                <button class="bg-red-500 hover:bg-red-600 text-white text-xs px-3 py-1 rounded transition">Delete</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </div>
+
+  {# ── Create ── #}
+  <div class="flex-1 min-w-[220px] border rounded-xl p-5 bg-blue-50 h-fit">
+    <h4 class="font-semibold mb-3">Add New Student</h4>
+    <form method="POST" class="space-y-2">
+      <input type="hidden" name="action" value="create"/>
+      <input type="email" name="email" placeholder="Email" required
+             class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none"/>
+      <input type="text" name="name" placeholder="Full Name" required
+             class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none"/>
+      <input type="password" name="password" placeholder="Password" required
+             class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none"/>
+      <input type="text" name="roomNumber" placeholder="Room Number"
+             class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none"/>
+      <select name="hostelId" class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none">
+        <option value="">Select Hostel</option>
+        {% for h in hostels %}
+        <option value="{{ h.id }}">{{ h.name }}</option>
+        {% endfor %}
+      </select>
+      <select name="mentorId" class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none">
+        <option value="">-- Assign Mentor --</option>
+        {% for m in mentors %}
+        <option value="{{ m.id }}">{{ m.name }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit"
+              class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-sm transition">
+        Create Student
+      </button>
+    </form>
+  </div>
+
+</div>
+{% endblock %}

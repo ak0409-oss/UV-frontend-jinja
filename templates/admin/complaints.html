@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}Complaint Database{% endblock %}
+{% block content %}
+
+<div class="flex justify-between items-center mb-5">
+  <h2 class="text-2xl font-bold">Complaint Database Manager</h2>
+  <a href="/admin" class="text-sm text-slate-500 hover:underline">← Back to Dashboard</a>
+</div>
+
+{# ── Hostel filter ── #}
+<div class="bg-slate-100 rounded-lg p-4 mb-5">
+  <form method="GET" class="flex items-center gap-3 flex-wrap">
+    <label class="font-semibold text-sm">Select Hostel:</label>
+    <select name="hostel" onchange="this.form.submit()"
+            class="border rounded-lg px-3 py-1.5 text-sm focus:outline-none">
+      <option value="">-- All Hostels --</option>
+      {% for h in hostels %}
+      <option value="{{ h.id }}" {% if h.id == sel_hostel %}selected{% endif %}>{{ h.name }}</option>
+      {% endfor %}
+    </select>
+    <input type="hidden" name="status" value="{{ sel_status }}"/>
+  </form>
+</div>
+
+{# ── Tabs ── #}
+{% set tab_colors = {
+  'pending':     '#ea580c',
+  'in_progress': '#2563eb',
+  'resolved':    '#16a34a',
+  'rejected':    '#dc2626',
+  'flagged':     '#6b7280',
+} %}
+{% set tab_labels = {
+  'pending':     'Pending',
+  'in_progress': 'In Progress',
+  'resolved':    'Resolved',
+  'rejected':    'Rejected',
+  'flagged':     'Flagged',
+} %}
+<div class="flex border-b mb-5 overflow-x-auto">
+  {% for status, label in tab_labels.items() %}
+  <a href="?status={{ status }}{% if sel_hostel %}&hostel={{ sel_hostel }}{% endif %}"
+     class="px-5 py-2 font-bold text-sm whitespace-nowrap border-b-4 transition"
+     style="border-color:{{ tab_colors[status] if sel_status == status else 'transparent' }};
+            color:{{ tab_colors[status] if sel_status == status else '#64748b' }}">
+    {{ label }} ({{ counts[status] }})
+  </a>
+  {% endfor %}
+</div>
+
+{# ── Table ── #}
+{% if not complaints %}
+  <p class="text-slate-500 italic p-4">No complaints found in this category.</p>
+{% else %}
+<div class="overflow-x-auto rounded-lg border" x-data="{ expanded: null }">
+  <table class="w-full text-sm">
+    <thead class="bg-slate-800 text-white">
+      <tr>
+        <th class="px-4 py-3 text-left">Date</th>
+        <th class="px-4 py-3 text-left">Student</th>
+        <th class="px-4 py-3 text-left">Category</th>
+        <th class="px-4 py-3 text-left">Issue</th>
+        <th class="px-4 py-3 text-left">Delete</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y">
+      {% for c in complaints %}
+      {% set author = user_map.get(c.userId) %}
+      <tr class="hover:bg-slate-50">
+        <td class="px-4 py-3 text-slate-500">{{ c.createdAt }}</td>
+        <td class="px-4 py-3">
+          <div class="font-medium">{{ author.name if author else 'Unknown' }}</div>
+          <div class="text-xs text-slate-500">Room {{ author.get('roomNumber','N/A') if author else '' }}</div>
+        </td>
+        <td class="px-4 py-3">
+          <span class="bg-slate-200 text-slate-700 text-xs rounded-full px-2 py-0.5">{{ c.category.upper() }}</span>
+        </td>
+        <td class="px-4 py-3" x-data="{ open: false }">
+          <button @click="open = !open"
+                  class="text-left font-bold text-blue-700 hover:underline bg-transparent border-none cursor-pointer">
+            {{ c.heading }}
+          </button>
+          <div x-show="open" class="mt-2 p-3 bg-slate-50 border rounded text-sm">
+            <p>{{ c.description }}</p>
+            {% if c.get('wardenComment') %}
+            <hr class="my-2"/>
+            <p class="text-blue-700"><strong>Warden:</strong> {{ c.wardenComment }}</p>
+            {% endif %}
+            {% if c.get('mentorComment') %}
+            <p class="text-purple-700"><strong>Mentor:</strong> {{ c.mentorComment }}</p>
+            {% endif %}
+          </div>
+        </td>
+        <td class="px-4 py-3">
+          <form method="POST"
+                onsubmit="return confirm('Delete this complaint? This cannot be undone.')">
+            <input type="hidden" name="complaint_id" value="{{ c.id }}"/>
+            <button class="text-red-500 hover:text-red-700 font-bold text-lg leading-none bg-transparent border-none cursor-pointer">✕</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+{% endblock %}

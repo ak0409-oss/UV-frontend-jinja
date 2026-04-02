@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Mentor Dashboard{% endblock %}
+{% block content %}
+
+<h2 class="text-2xl font-bold">Mentor Dashboard</h2>
+<p class="text-slate-500 mb-6">Welcome, <strong>{{ current_user.name }}</strong></p>
+
+{% set status_colors = {
+  'resolved':    '#16a34a',
+  'pending':     '#ea580c',
+  'rejected':    '#dc2626',
+  'in_progress': '#2563eb',
+  'flagged':     '#6b7280',
+} %}
+
+<h3 class="font-semibold mb-4">My Mentees' Complaints</h3>
+
+{% if not mentee_complaints %}
+  <p class="text-slate-500 italic">Your mentees have not filed any complaints yet.</p>
+{% else %}
+<div class="overflow-x-auto rounded-lg border">
+  <table class="w-full text-sm">
+    <thead class="bg-slate-100">
+      <tr>
+        <th class="px-4 py-3 text-left">Student</th>
+        <th class="px-4 py-3 text-left">Issue</th>
+        <th class="px-4 py-3 text-left">Current Status</th>
+        <th class="px-4 py-3 text-left">Mentor Action</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y">
+      {% for c in mentee_complaints %}
+      {% set author = user_map.get(c.userId) %}
+      <tr class="hover:bg-slate-50">
+        <td class="px-4 py-3">
+          <div class="font-medium">{{ author.name if author else 'Unknown' }}</div>
+          <div class="text-xs text-slate-500">Room: {{ author.get('roomNumber','N/A') if author else '' }}</div>
+        </td>
+        <td class="px-4 py-3 max-w-xs">
+          <span class="bg-slate-200 text-slate-700 text-xs rounded-full px-2 py-0.5">{{ c.category.upper() }}</span>
+          <div class="font-medium mt-1">{{ c.heading }}</div>
+          <div class="text-xs text-slate-500">{{ c.description }}</div>
+        </td>
+        <td class="px-4 py-3">
+          <span class="text-white text-xs rounded-full px-2 py-1"
+                style="background:{{ status_colors.get(c.status,'#6b7280') }}">
+            {{ c.status.upper() }}
+          </span>
+          {% if c.get('wardenComment') %}
+          <p class="text-xs text-blue-700 mt-1"><strong>Warden:</strong> {{ c.wardenComment }}</p>
+          {% endif %}
+        </td>
+        <td class="px-4 py-3 bg-slate-50">
+          <form method="POST" class="space-y-2">
+            <input type="hidden" name="complaint_id" value="{{ c.id }}"/>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" name="is_urgent" value="1"
+                     {% if c.get('isUrgent') %}checked{% endif %}
+                     class="accent-red-500"/>
+              <span class="text-xs font-bold text-red-600">Mark as URGENT (Escalate)</span>
+            </label>
+            <textarea name="comment" rows="2" placeholder="Add your advice..."
+                      class="w-full border rounded px-2 py-1 text-xs focus:outline-none resize-none">{{ c.get('mentorComment','') }}</textarea>
+            <button type="submit"
+                    class="bg-slate-800 hover:bg-slate-700 text-white text-xs px-4 py-1.5 rounded transition">
+              Update
+            </button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{% endblock %}

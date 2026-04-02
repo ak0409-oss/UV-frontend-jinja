@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}Warden Dashboard{% endblock %}
+{% block content %}
+
+<h2 class="text-2xl font-bold">Warden Dashboard</h2>
+<p class="text-slate-500 mb-6">
+  Hostel: <strong>{{ hostel.name if hostel else 'Unassigned' }}</strong>
+</p>
+
+{% set status_colors = {
+  'resolved':    '#16a34a',
+  'pending':     '#ea580c',
+  'rejected':    '#dc2626',
+  'in_progress': '#2563eb',
+  'flagged':     '#6b7280',
+} %}
+
+{% macro section_table(items, section) %}
+{% if not items %}
+  <p class="text-slate-400 italic ml-2 mb-6">No complaints in this section.</p>
+{% else %}
+<div class="overflow-x-auto rounded-lg border mb-8">
+  <table class="w-full text-sm">
+    <thead class="bg-slate-100">
+      <tr>
+        <th class="px-4 py-3 text-left w-36">Student</th>
+        <th class="px-4 py-3 text-left w-24">Category</th>
+        <th class="px-4 py-3 text-left">Issue</th>
+        {% if section == 'completed' %}
+          <th class="px-4 py-3 text-left w-48">Comment</th>
+          <th class="px-4 py-3 text-left w-28">Result</th>
+        {% else %}
+          <th class="px-4 py-3 text-left w-72">Comment &amp; Action</th>
+        {% endif %}
+      </tr>
+    </thead>
+    <tbody class="divide-y">
+      {% for c in items %}
+      {% set author = user_map.get(c.userId) %}
+      <tr class="hover:bg-slate-50 align-top">
+        <td class="px-4 py-3">
+          <div class="font-medium">{{ author.name if author else 'Unknown' }}</div>
+          <div class="text-xs text-slate-500">Room: {{ author.get('roomNumber','N/A') if author else '—' }}</div>
+        </td>
+        <td class="px-4 py-3">
+          <span class="bg-slate-200 text-slate-700 text-xs rounded-full px-2 py-0.5">{{ c.category.upper() }}</span>
+        </td>
+        <td class="px-4 py-3">
+          <div class="font-medium">{{ c.heading }}</div>
+          <div class="text-xs text-slate-500">{{ c.description }}</div>
+          {% if c.get('mentorComment') %}
+          <div class="text-purple-700 text-xs mt-1"><strong>Mentor:</strong> {{ c.mentorComment }}</div>
+          {% endif %}
+          {% if c.get('isUrgent') %}
+          <span class="inline-block mt-1 bg-red-100 text-red-700 text-xs font-bold rounded px-1">🔴 URGENT</span>
+          {% endif %}
+        </td>
+        {% if section == 'completed' %}
+          <td class="px-4 py-3 text-slate-600 text-sm">{{ c.get('wardenComment') or '—' }}</td>
+          <td class="px-4 py-3">
+            <span class="text-white text-xs rounded-full px-2 py-1 font-medium"
+                  style="background:{{ status_colors.get(c.status,'#6b7280') }}">{{ c.status.upper() }}</span>
+            {% if c.get('resolvedAt') %}
+            <div class="text-xs text-slate-500 mt-1">{{ c.resolvedAt }}</div>
+            {% endif %}
+          </td>
+        {% else %}
+          <td class="px-4 py-3">
+            <form method="POST" class="space-y-2">
+              <input type="hidden" name="complaint_id" value="{{ c.id }}"/>
+              <textarea name="comment" rows="2" placeholder="Add comment…"
+                        class="w-full border rounded px-2 py-1 text-xs focus:outline-none resize-none">{{ c.get('wardenComment','') }}</textarea>
+              <div class="flex flex-col gap-1">
+                <button type="submit" name="action" value="resolved"
+                        class="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1.5 rounded transition">✓ Resolve</button>
+                <button type="submit" name="action" value="rejected"
+                        class="bg-red-500 hover:bg-red-600 text-white text-xs px-3 py-1.5 rounded transition">✕ Reject</button>
+                {% if section != 'progress' %}
+                <button type="submit" name="action" value="in_progress"
+                        class="text-white text-xs px-3 py-1.5 rounded transition" style="background:#ea580c">⟳ In Progress</button>
+                {% endif %}
+              </div>
+            </form>
+          </td>
+        {% endif %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endmacro %}
+
+<div class="border-l-4 border-red-500 bg-red-50 px-4 py-2.5 font-bold mb-2 rounded-r">1. 🔴 Mentor Forwarded (URGENT)</div>
+{{ section_table(urgent, 'urgent') }}
+
+<div class="border-l-4 border-orange-400 bg-orange-50 px-4 py-2.5 font-bold mb-2 rounded-r">2. ⏳ Pending Complaints</div>
+{{ section_table(pending, 'pending') }}
+
+<div class="border-l-4 border-blue-500 bg-blue-50 px-4 py-2.5 font-bold mb-2 rounded-r">3. 🔄 In Progress</div>
+{{ section_table(in_progress, 'progress') }}
+
+<div class="border-l-4 border-green-500 bg-green-50 px-4 py-2.5 font-bold mb-2 rounded-r">4. ✅ Completed History</div>
+{{ section_table(completed, 'completed') }}
+
+<div class="border-l-4 border-slate-400 bg-slate-100 px-4 py-2.5 font-bold mb-2 rounded-r">5. 🗂️ Archived / Flagged</div>
+{{ section_table(archived, 'archived') }}
+
+{% endblock %}

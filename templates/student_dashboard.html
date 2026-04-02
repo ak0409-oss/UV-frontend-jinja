@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Student Dashboard{% endblock %}
+{% block content %}
+
+<h2 class="text-2xl font-bold">Student Dashboard</h2>
+<p class="text-slate-500 mb-6">
+  Room: <strong>{{ current_user.get('roomNumber') or 'Not Assigned' }}</strong> |
+  Hostel: <strong>{{ hostel.name if hostel else 'Not Assigned' }}</strong>
+</p>
+
+{% set status_colors = {
+  'pending':     '#ea580c',
+  'resolved':    '#16a34a',
+  'rejected':    '#dc2626',
+  'in_progress': '#2563eb',
+  'flagged':     '#6b7280',
+} %}
+
+<div class="flex gap-8 flex-wrap">
+
+  {# ── File a complaint ── #}
+  <div class="flex-1 min-w-[260px] border rounded-xl p-6 bg-white shadow-sm">
+    <h3 class="font-semibold mb-4">📝 File a Complaint</h3>
+    <form method="POST" class="space-y-3">
+      <div>
+        <label class="block text-sm font-medium text-slate-700 mb-1">Category</label>
+        <select name="category" class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none">
+          {% for cat in categories %}
+          <option value="{{ cat }}">{{ cat.upper() }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <input type="text" name="heading" placeholder="Short heading, e.g. Fan not working"
+             required class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none"/>
+      <textarea name="description" placeholder="Describe your issue in detail..." rows="5"
+                required class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none resize-none"></textarea>
+      <button type="submit"
+              class="bg-slate-800 hover:bg-slate-700 text-white px-5 py-2 rounded-lg text-sm transition">
+        Submit Complaint
+      </button>
+    </form>
+  </div>
+
+  {# ── My complaints ── #}
+  <div class="flex-1 min-w-[260px] border rounded-xl p-6 bg-white shadow-sm">
+    <h3 class="font-semibold mb-4">📋 My Complaints</h3>
+    {% if not my_complaints %}
+      <p class="text-slate-500 italic">No complaints filed yet.</p>
+    {% else %}
+    <ul class="space-y-4">
+      {% for c in my_complaints %}
+      <li class="border-b pb-4 last:border-0">
+        <div class="flex justify-between items-start gap-2">
+          <strong class="text-slate-800">{{ c.heading }}</strong>
+          <span class="text-white text-xs rounded-full px-2 py-0.5 shrink-0"
+                style="background:{{ status_colors.get(c.status, '#6b7280') }}">
+            {{ c.status.upper() }}
+          </span>
+        </div>
+        <div class="text-xs text-slate-500 mt-0.5">{{ c.createdAt }}</div>
+        <p class="text-sm text-slate-600 mt-1">{{ c.description }}</p>
+        {% if c.get('wardenComment') %}
+        <p class="text-sm text-blue-700 mt-1">
+          <strong>Warden:</strong> {{ c.wardenComment }}
+        </p>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

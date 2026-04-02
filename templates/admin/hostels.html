@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Manage Hostels{% endblock %}
+{% block content %}
+
+<div class="flex justify-between items-center mb-6">
+  <h2 class="text-2xl font-bold">Manage Hostels</h2>
+  <a href="/admin" class="text-sm text-slate-500 hover:underline">← Back to Dashboard</a>
+</div>
+
+<div class="flex gap-8 flex-wrap">
+
+  {# ── List ── #}
+  <div class="flex-[2] min-w-0">
+    <h3 class="font-semibold mb-3">Existing Hostels</h3>
+    {% if not hostels %}
+      <p class="text-slate-500 italic">No hostels created yet.</p>
+    {% else %}
+    <div class="overflow-x-auto rounded-lg border">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-800 text-white">
+          <tr>
+            <th class="px-4 py-3 text-left">Hostel Name</th>
+            <th class="px-4 py-3 text-left">Type</th>
+            <th class="px-4 py-3 text-left">Capacity</th>
+            <th class="px-4 py-3 text-left">Action</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y">
+          {% for h in hostels %}
+          <tr class="hover:bg-slate-50">
+            <td class="px-4 py-3 font-bold">{{ h.name }}</td>
+            <td class="px-4 py-3">{{ h.gender }}</td>
+            <td class="px-4 py-3">{{ h.totalRooms }} Rooms</td>
+            <td class="px-4 py-3">
+              <form method="POST"
+                    onsubmit="return confirm('Delete {{ h.name }}? Students will be unassigned.')">
+                <input type="hidden" name="action" value="delete"/>
+                <input type="hidden" name="hostel_id" value="{{ h.id }}"/>
+                <button class="bg-red-500 hover:bg-red-600 text-white text-xs px-3 py-1 rounded transition">
+                  Delete
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </div>
+
+  {# ── Create ── #}
+  <div class="flex-1 min-w-[220px] border-2 rounded-xl p-6 bg-slate-50 h-fit">
+    <h3 class="font-semibold mb-4">Add New Hostel</h3>
+    <form method="POST" class="space-y-3">
+      <input type="hidden" name="action" value="create"/>
+      <input type="text" name="name" placeholder="Hostel Name" required
+             class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"/>
+      <select name="gender" class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none">
+        <option value="Boys">Boys Hostel</option>
+        <option value="Girls">Girls Hostel</option>
+      </select>
+      <input type="number" name="totalRooms" placeholder="Total Rooms" min="1" required
+             class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"/>
+      <button type="submit"
+              class="w-full bg-slate-800 hover:bg-slate-700 text-white py-2 rounded-lg text-sm transition">
+        Create Hostel
+      </button>
+    </form>
+  </div>
+
+</div>
+{% endblock %}
